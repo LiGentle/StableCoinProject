@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稳定币清算系统 - 管理员面板</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>稳定币清算系统</h1>
+            <nav class="nav">
+                <button class="nav-btn" data-target="admin">管理员面板</button>
+                <button class="nav-btn" data-target="user">用户面板</button>
+                <button class="nav-btn" data-target="keeper">Keeper面板</button>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- 管理员面板 -->
+            <section id="admin" class="panel active">
+                <h2>管理员面板</h2>
+
+                <!-- 权限管理 -->
+                <div class="card">
+                    <h3>Custodian合约权限管理</h3>
+                    <div class="contract-section">
+                        <div class="roles-overview">
+                            <h4>当前角色持有者</h4>
+                            <div class="role-status">
+                                <span>ADMIN_ROLE:</span>
+                                <span id="cust-admin-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeCustodianAdminRole()">移除</span>
+                            </div>
+                            <div class="role-status">
+                                <span>LIQUIDATION_ROLE:</span>
+                                <span id="cust-liquidation-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeCustodianLiquidationRole()">移除</span>
+                            </div>
+                            <div class="role-status">
+                                <span>AUCTION_ROLE:</span>
+                                <span id="cust-auction-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeCustodianAuctionRole()">移除</span>
+                            </div>
+                        </div>
+                        <div class="role-management">
+                            <h4>授予角色</h4>
+                            <div class="form-group">
+                                <label>地址</label>
+                                <input type="text" id="custodianGrantAddress" placeholder="输入地址">
+                            </div>
+                            <div class="button-group">
+                                <button onclick="grantCustodianAdminRole()">授予ADMIN</button>
+                                <button onclick="grantCustodianLiquidationRole()">授予LIQUIDATION</button>
+                                <button onclick="grantCustodianAuctionRole()">授予AUCTION</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Liquidation合约权限管理</h3>
+                    <div class="contract-section">
+                        <div class="roles-overview">
+                            <h4>当前角色持有者</h4>
+                            <div class="role-status">
+                                <span>ADMIN_ROLE:</span>
+                                <span id="liq-admin-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeLiquidationAdminRole()">移除</span>
+                            </div>
+                            <div class="role-status">
+                                <span>CUSTODIAN_ROLE:</span>
+                                <span id="liq-custodian-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeLiquidationCustodianRole()">移除</span>
+                            </div>
+                            <div class="role-status">
+                                <span>AUCTION_ROLE:</span>
+                                <span id="liq-auction-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeLiquidationAuctionRole()">移除</span>
+                            </div>
+                        </div>
+                        <div class="role-management">
+                            <h4>授予角色</h4>
+                            <div class="form-group">
+                                <label>地址</label>
+                                <input type="text" id="liquidationGrantAddress" placeholder="输入地址">
+                            </div>
+                            <div class="button-group">
+                                <button onclick="grantLiquidationAdminRole()">授予ADMIN</button>
+                                <button onclick="grantLiquidationCustodianRole()">授予CUSTODIAN</button>
+                                <button onclick="grantLiquidationAuctionRole()">授予AUCTION</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Auction合约权限管理</h3>
+                    <div class="contract-section">
+                        <div class="roles-overview">
+                            <h4>当前角色持有者</h4>
+                            <div class="role-status">
+                                <span>ADMIN_ROLE:</span>
+                                <span id="auc-admin-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeAuctionAdminRole()">移除</span>
+                            </div>
+                            <div class="role-status">
+                                <span>CALLER_ROLE:</span>
+                                <span id="auc-caller-holders">加载中...</span>
+                                <span class="revoke-btn" onclick="revokeAuctionCallerRole()">移除</span>
+                            </div>
+                        </div>
+                        <div class="role-management">
+                            <h4>授予角色</h4>
+                            <div class="form-group">
+                                <label>地址</label>
+                                <input type="text" id="auctionGrantAddress" placeholder="输入地址">
+                            </div>
+                            <div class="button-group">
+                                <button onclick="grantAuctionAdminRole()">授予ADMIN</button>
+                                <button onclick="grantAuctionCallerRole()">授予CALLER</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 清算参数配置 -->
+                <div class="card">
+                    <h3>清算参数配置</h3>
+                    <div class="form-group">
+                        <label>当前下折阈值: <span id="currentAdjustmentThreshold">加载中...</span></label>
+                        <input type="number" id="adjustmentThreshold" step="0.01" placeholder="0.5">
+                        <button onclick="setAdjustmentThreshold()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前清算阈值: <span id="currentLiquidationThreshold">加载中...</span></label>
+                        <input type="number" id="liquidationThreshold" step="0.01" placeholder="0.3">
+                        <button onclick="setLiquidationThreshold()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前惩罚金: <span id="currentPenalty">加载中...</span></label>
+                        <input type="number" id="penalty" step="0.01" placeholder="0.03">
+                        <button onclick="setPenalty()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>清算功能状态: <span id="liquidationEnabled" class="status-enabled">加载中...</span></label>
+                        <div class="button-group">
+                            <button onclick="toggleLiquidation(true)">清算功能启用</button>
+                            <button onclick="toggleLiquidation(false)">清算功能禁用</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 拍卖参数配置 -->
+                <div class="card">
+                    <h3>拍卖参数配置</h3>
+                    <div class="form-group">
+                        <label>当前价格乘数: <span id="currentPriceMultiplier">加载中...</span></label>
+                        <input type="number" id="priceMultiplier" step="0.01" placeholder="1.1">
+                        <button onclick="setPriceMultiplier()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前重置时间: <span id="currentResetTime">加载中...</span></label>
+                        <input type="number" id="resetTime" placeholder="3600">
+                        <button onclick="setResetTime()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前拍卖重置价格阈值: <span id="currentPriceDropThreshold">加载中...</span></label>
+                        <input type="number" id="priceDropThreshold" step="0.01" placeholder="0.5">
+                        <button onclick="setPriceDropThreshold()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前百分比奖励: <span id="currentPercentageReward">加载中...</span></label>
+                        <input type="number" id="percentageReward" step="0.01" placeholder="0.01">
+                        <button onclick="setPercentageReward()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前固定奖励: <span id="currentFixedReward">加载中...</span></label>
+                        <input type="number" id="fixedReward" step="0.01" placeholder="100">
+                        <button onclick="setFixedReward()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前断路器级别: <span id="currentCircuitBreaker">加载中...</span></label>
+                        <div class="circuit-breaker-info">
+                            <p>断路器级别说明：</p>
+                            <ul>
+                                <li>0: 无限制</li>
+                                <li>1: 禁止新拍卖</li>
+                                <li>2: 禁止新拍卖或重置拍卖</li>
+                                <li>3: 禁止新拍卖、重置拍卖或购买</li>
+                            </ul>
+                        </div>
+                        <input type="number" id="circuitBreaker" min="0" max="3" placeholder="0">
+                        <button onclick="setCircuitBreaker()">设置</button>
+                    </div>
+                    <div class="form-group">
+                        <label>当前最小可购买量: <span id="currentMinAuctionAmount">加载中...</span></label>
+                        <input type="number" id="minAuctionAmount" placeholder="0">
+                        <button onclick="setMinAuctionAmount()">设置</button>
+                    </div>
+                </div>
+
+                <!-- 紧急取消拍卖 -->
+                <div class="card">
+                    <h3>紧急取消拍卖</h3>
+                    <div class="form-group">
+                        <label>拍卖ID</label>
+                        <input type="number" id="cancelAuctionId" placeholder="输入要取消的拍卖ID">
+                        <button onclick="cancelAuction()">取消拍卖</button>
+                    </div>
+                </div>
+
+                <!-- 会计 -->
+                <div class="card">
+                    <h3>会计</h3>
+                    <div class="accounting-grid">
+                        <div class="accounting-item">
+                            <div>当前累计支付给Keeper的奖励: <span id="accumulatedReward">加载中...</span></div>
+                        </div>
+                        <div class="accounting-item">
+                            <div>当前累计收到的惩罚金: <span id="accumulatedPenalty">加载中...</span></div>
+                        </div>
+                    </div>
+                    <button onclick="getAccumulatedData()">刷新数据</button>
+                    <button onclick="resetAccounting()">重置会计数据</button>
+                </div>
+
+                <!-- 地址参数配置 -->
+                <div class="card">
+                    <h3>地址参数配置</h3>
+                    <div class="address-config">
+                        <div class="address-group">
+                            <h4>Custodian合约地址配置</h4>
+                            <div class="form-group">
+                                <label>当前地址: <span id="currentCustodianAddress">加载中...</span></label>
+                                <input type="text" id="custodianAddress" placeholder="输入新的Custodian地址">
+                                <button onclick="setCustodianAddress()">设置</button>
+                            </div>
+                        </div>
+                        <div class="address-group">
+                            <h4>Liquidation合约地址配置</h4>
+                            <div class="form-group">
+                                <label>当前地址: <span id="currentLiquidationAddress">加载中...</span></label>
+                                <input type="text" id="liquidationAddress" placeholder="输入新的Liquidation地址">
+                                <button onclick="setLiquidationAddress()">设置</button>
+                            </div>
+                        </div>
+                        <div class="address-group">
+                            <h4>Auction合约地址配置</h4>
+                            <div class="form-group">
+                                <label>当前地址: <span id="currentAuctionAddress">加载中...</span></label>
+                                <input type="text" id="auctionAddress" placeholder="输入新的Auction地址">
+                                <button onclick="setAuctionAddress()">设置</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统状态 -->
+                <div class="card">
+                    <h3>系统状态</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span>清算功能状态:</span>
+                            <span id="liquidationStatus" class="status-enabled">未知</span>
+                        </div>
+                        <div class="status-item">
+                            <span>活跃拍卖数量:</span>
+                            <span id="activeAuctions">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>断路器级别:</span>
+                            <span id="circuitBreakerStatus">0</span>
+                        </div>
+                    </div>
+                    <button onclick="loadAdminData()">刷新状态</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

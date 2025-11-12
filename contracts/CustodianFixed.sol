@@ -40,7 +40,7 @@ contract CustodianFixed is Ownable, AccessControl, ReentrancyGuard {
         Reset,
         Matured
     }
-    State public state;
+    State public state;  //Modified by Jintao: change state as public
     bool private _systemInitialized = false;
 
     // 统计变量

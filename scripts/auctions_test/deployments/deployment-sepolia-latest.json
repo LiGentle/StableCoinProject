@@ -1,0 +1,34 @@
+{
+  "network": "sepolia",
+  "deployer": "0xA4b399a194e2DD9b84357E92474D0c32e3359A74",
+  "contracts": {
+    "wltc": "0x28a1eFD491B25281EB881714A2AA2eF0020Dc337",
+    "stableToken": "0x1326cc0A72322F47129a59a911b2FCac24d62Ca8",
+    "leverageToken": "0xe3e887E3208c2a7309857536Fa9be0BC0d1b3204",
+    "interestManager": "0x3E595363f0bfFb9cee1c154A107967d4753237A0",
+    "priceOracle": "0xc37c396515EF1238A343852973E6974Cc0bA9dF8",
+    "custodian": "0x10c28dDd3788cAFf26d892D3B50060c65b4f5020",
+    "linearDecrease": "0xB200952a7cD7f66989BBCc42adDBd6E4a60210Da",
+    "auctionManager": "0xceF29f7728A331C1E6812D06c9c8508A5ecB4E97",
+    "liquidationManager": "0x9Ce427e275191fB087a93683999d59f900DdBCE8"
+  },
+  "parameters": {
+    "auction": {
+      "priceMultiplier": "1.0",
+      "resetTime": "7200",
+      "minAuctionAmount": "100",
+      "priceDropThreshold": "0.8",
+      "percentageReward": "0.01",
+      "fixedReward": "10"
+    },
+    "liquidation": {
+      "adjustmentThreshold": "0.5",
+      "liquidationThreshold": "0.3",
+      "penalty": "0.03"
+    },
+    "priceCalculator": {
+      "tau": "7200"
+    }
+  },
+  "timestamp": "2025-11-12T15:39:39.185Z"
+}

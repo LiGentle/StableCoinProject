@@ -211,6 +211,8 @@ contract Liquidation is AccessControl, ReentrancyGuard {
     event NetValueAdjusted(address indexed user, uint256 indexed fromTokenId, uint256 indexed toTokenId, uint256 adjustAmountInWei, uint256 underlyingAmountInWei);
     event NoLeftAfterLiquidation(string message);
 
+    event DEFICIT(uint256 value);
+
 
 
     // ================= 构造函数 =================
@@ -296,7 +298,7 @@ contract Liquidation is AccessControl, ReentrancyGuard {
         address user,
         uint256 tokenId,
         address kpr
-    ) external liquidationEnabled returns (uint256 auctionId) {
+    ) external liquidationEnabled nonReentrant returns (uint256 auctionId) {
         require(address(auction)!=address(0), 'Set auction address first!');
         require(address(custodian)!=address(0), 'Set custodian address first!');
         require(address(leverageToken)!=address(0), 'Set leverageToken address first!');
@@ -368,6 +370,7 @@ contract Liquidation is AccessControl, ReentrancyGuard {
         }
         underlyingValue = wmul ( balance, (nav + 1*PRECISION_UNIT/leverageLevel) );
         (uint256 currentPrice, ) = custodian.getLatestPrice();
+        require(currentPrice>0, 'Invalid oracle price (<=0)!');
         underlyingAmount = wdiv( underlyingValue , currentPrice );
     }
 
@@ -410,17 +413,24 @@ contract Liquidation is AccessControl, ReentrancyGuard {
         }
          
         uint256 penalty = wmul(userLiquidationStatus[usr][tokenID].balance, globalConfig.penalty);
+        uint256 stableEarned = userLiquidationStatus[usr][tokenID].stableNums;
 
         uint256 stableAmountToBeBurned = wmul(userLiquidationStatus[usr][tokenID].balance,
             1*PRECISION_UNIT/leverageLevel);
-        
-        uint256 amountToUser = userLiquidationStatus[usr][tokenID].stableNums
-            - penalty - stableAmountToBeBurned;
-        if (amountToUser <= 0) {
-            emit NoLeftAfterLiquidation('There is no left to be withdrawn after penalty!');
-        } else{
+
+        if ( stableEarned > (penalty + stableAmountToBeBurned) ){
+            uint256 amountToUser = stableEarned - penalty - stableAmountToBeBurned;
             custodian.withdrawAfterLiquidation(usr, tokenID, amountToUser, penalty, stableAmountToBeBurned);
+        } else if (stableEarned < stableAmountToBeBurned ){
+            emit NoLeftAfterLiquidation('There is no left to be withdrawn after penalty!');
+            custodian.withdrawAfterLiquidation(usr, tokenID, 0, 0, stableAmountToBeBurned);
+            emit DEFICIT((stableAmountToBeBurned - stableEarned));
+        } else {
+            emit NoLeftAfterLiquidation('There is no left to be withdrawn after penalty!');
+            custodian.withdrawAfterLiquidation(usr, tokenID, 0, stableEarned -stableAmountToBeBurned, stableAmountToBeBurned);
         }
+        
+
         userLiquidationStatus[usr][tokenID].isFreezed = false; //解冻
         userLiquidationStatus[usr][tokenID].stableNums = 0; //重置stableNums
         userLiquidationStatus[usr][tokenID].auctionId = 0; //重置auctionID
@@ -561,6 +571,8 @@ contract Liquidation is AccessControl, ReentrancyGuard {
 
         // 新的铸币价格 = 最新底层资产价格 （因为目标净值为1）
         (uint256 newMintPrice, ) = custodian.getLatestPrice();
+        require(newMintPrice>0, 'Invalid oracle price (<=0)!');
+
 
         // 需要的底层资产的数量
         uint256 underlyingAmountInWei =wdiv((adjustedAmount - wmul(netValue,adjustedAmount)), newMintPrice); 

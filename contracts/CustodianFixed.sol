@@ -1125,7 +1125,9 @@ function getSingleLeverageTokenNavV2(
         require(stableToken.balanceOf(address(this)) >= (stableAmountToBeBurned+amountToUser), 'withdrawAfterLiquidation failed.' );
         stableToken.burn(address(this), stableAmountToBeBurned);
         totalSupplyS -= stableAmountToBeBurned;
-        require(stableToken.transfer(user, amountToUser), 'withdrawAfterLiquidation failed' );
+        if (amountToUser > 0){
+            require(stableToken.transfer(user, amountToUser), 'withdrawAfterLiquidation failed' );
+        }
         accumulatedPenaltyInStable += penalty;
         emit BurnStableTokenInLiquidation(user, tokenID, stableAmountToBeBurned);
         emit WithdrawAfterLiquidation(user, amountToUser, penalty); 

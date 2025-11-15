@@ -1,0 +1,12 @@
+/Users/jintao/Library/Mobile Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/deps/serde-73fda84baea1c54b.d: /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/jintao/Library/Mobile\ Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/build/serde-53b1d5a660df5d9d/out/private.rs
+
+/Users/jintao/Library/Mobile Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/deps/libserde-73fda84baea1c54b.rmeta: /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/jintao/Library/Mobile\ Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/build/serde-53b1d5a660df5d9d/out/private.rs
+
+/Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/jintao/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/jintao/Library/Mobile\ Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/build/serde-53b1d5a660df5d9d/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/jintao/Library/Mobile Documents/com~apple~CloudDocs/crypto/StableCoinProject/keeper_bots/rust_liquidation_keeper/target/debug/build/serde-53b1d5a660df5d9d/out

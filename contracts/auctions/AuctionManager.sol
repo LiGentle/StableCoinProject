@@ -274,7 +274,7 @@ contract DuchAuction is AccessControl, ReentrancyGuard{
             uint256 currentMinAuctionAmount = auctionParams.minAuctionAmount;
             // 当拍卖价值大于等于最小拍卖金额时，才激励
             if ( wmul(underlyingAmount, currentPrice) >= currentMinAuctionAmount) {
-                rewardAmount = add(currentFixedReward, wmul( wmul(underlyingAmount, currentPrice), currentPercentageReward));
+                rewardAmount = add(currentFixedReward, wmul( wmul(underlyingAmount, currentPrice) - currentMinAuctionAmount , currentPercentageReward));
                 custodian.rewardKpr(triggerer, rewardAmount);
             }
         }

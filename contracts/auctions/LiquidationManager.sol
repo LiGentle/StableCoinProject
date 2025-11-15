@@ -212,6 +212,10 @@ contract Liquidation is AccessControl, ReentrancyGuard {
     event NoLeftAfterLiquidation(string message);
 
     event DEFICIT(uint256 value);
+    event LiquidationConfigInfo(uint256 adjustmentThreshold,
+        uint256 liquidationThreshold,
+        uint256 penalty,
+        bool enabled);
 
 
 
@@ -239,6 +243,8 @@ contract Liquidation is AccessControl, ReentrancyGuard {
             penalty: (3 * PRECISION_UNIT) / 100,       // 清算惩罚金 (0.03)
             enabled: true
         });
+
+        emit LiquidationConfigInfo(globalConfig.adjustmentThreshold, globalConfig.liquidationThreshold, globalConfig.penalty, globalConfig.enabled);
 
     }
 

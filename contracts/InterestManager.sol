@@ -59,7 +59,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
     event PositionIncreased(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 totalAmount);
     event PositionClosed(address indexed user, uint256 indexed tokenId, uint256 amount);
     event InterestAccrued(address indexed user, uint256 indexed tokenId, uint256 interestAmount);
-    event InterestCollected(address indexed user, uint256 indexed tokenId, uint256 interestAmount);
+    event InterestCollected(address indexed user, uint256 indexed tokenId, uint256  deductLAmountInWei, uint256 interestAmount); // modified by jintao
     event InterestRateChanged(uint256 oldRate, uint256 newRate);
     event InterestWithdrawn(address indexed to, uint256 amount);
     event SystemStatsUpdated(uint256 totalAccrued, uint256 totalCollected, uint256 activePositions);
@@ -89,6 +89,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
     ) Ownable(msg.sender) validAddress(_underlyingToken) {
         underlyingToken = IERC20(_underlyingToken);
         annualInterestRate = _annualInterestRate;
+        emit InterestRateChanged(0, _annualInterestRate); //added by jintao
     }
 
     // ================= 初始化函数 =================
@@ -234,7 +235,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
             totalInterestCollected += deductInterestInWei;
             totalLeverageAmount -= deductLAmountInWei;
             
-            emit InterestCollected(user, leverageTokenId, deductInterestInWei);
+            emit InterestCollected(user, leverageTokenId, deductLAmountInWei, deductInterestInWei); // modified by jintao
             
             if (position.lAmountInWei == 0) {
                 emit PositionClosed(user, leverageTokenId, deductLAmountInWei);

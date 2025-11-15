@@ -1,0 +1,15 @@
+[default]
+rpc_url = "http://localhost:8545"
+liquidation_threshold = 8000            # 80% (基础点)
+adjustment_threshold = 8500             # 85% (基础点)
+nav_recalc_interval = 300               # 5分钟
+liquidation_check_interval = 30         # 30秒
+current_interest_rate = 300             # 3% (基础点)
+
+[default.contracts]
+custodian = "0x0000000000000000000000000000000000000000"
+liquidation_manager = "0x0000000000000000000000000000000000000000"
+auction_manager = "0x0000000000000000000000000000000000000000"
+interest_manager = "0x0000000000000000000000000000000000000000"
+token = "0x0000000000000000000000000000000000000000"
+oracle = "0x0000000000000000000000000000000000000000"

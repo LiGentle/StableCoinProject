@@ -155,7 +155,7 @@ contract DuchAuction is AccessControl, ReentrancyGuard{
         uint256 rewardAmount
     );
 
-    event AuctionRemoved(uint256 auctionId);
+    event AuctionRemoved(uint256 indexed auctionId); // Jintao
 
     event AuctionCancelled(uint256 auctionId);
 

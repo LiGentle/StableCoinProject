@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         web3.clone(),
         database.clone(),
         config.clone(),
-    )?;
+    ).await?;
 
     tracing::info!("所有监控器初始化完成，准备启动...");
 

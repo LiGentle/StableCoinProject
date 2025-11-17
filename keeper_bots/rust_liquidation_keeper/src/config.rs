@@ -3,11 +3,14 @@
 //! 负责加载和管理应用的配置。
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     /// RPC节点URL
     pub rpc_url: String,
+    /// WebSocket URL (用于实时监听)
+    pub ws_url: Option<String>,
     /// 私钥（用于签名交易）
     pub private_key: Option<String>,
     /// 清算阈值 (基础点, 例如 8000 = 80%)
@@ -24,6 +27,9 @@ pub struct AppConfig {
 
     /// 当前利率 (基础点)
     pub current_interest_rate: u64,
+
+    /// 事件监控配置
+    pub event_monitoring: EventMonitoringConfig,
 }
 
 /// 合约地址配置
@@ -41,6 +47,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             rpc_url: "http://localhost:8545".to_string(),
+            ws_url: Some("ws://localhost:8546".to_string()), // 默认WebSocket URL
             private_key: None,
             liquidation_threshold: 8000, // 80%
             adjustment_threshold: 8500,  // 85%
@@ -48,6 +55,7 @@ impl Default for AppConfig {
             liquidation_check_interval: 30, // 30秒
             contracts: ContractAddresses::default(),
             current_interest_rate: 300, // 3%
+            event_monitoring: EventMonitoringConfig::default(),
         }
     }
 }
@@ -78,4 +86,25 @@ pub fn load_config() -> anyhow::Result<AppConfig> {
     let config: AppConfig = settings.try_deserialize()?;
 
     Ok(config)
+}
+
+/// 事件监控配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventMonitoringConfig {
+    /// 事件监听轮询间隔（秒）
+    pub polling_interval_secs: u64,
+    /// 每次请求获取的最大日志数量
+    pub max_logs_per_request: usize,
+    /// 批处理大小
+    pub batch_size: usize,
+}
+
+impl Default for EventMonitoringConfig {
+    fn default() -> Self {
+        Self {
+            polling_interval_secs: 10,     // 20秒轮询间隔（降低频率）
+            max_logs_per_request: 1000,     // 每次最多获取1000条日志
+            batch_size: 50,                 // 批处理大小
+        }
+    }
 }

@@ -56,7 +56,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
     
     event ContractInitialized(address indexed leverageToken, address indexed custodian);
     event PositionOpened(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 timestamp);
-    event PositionIncreased(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 totalAmount);
+    event PositionIncreased(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 totalAmount, uint256 totalInterest);
     event PositionClosed(address indexed user, uint256 indexed tokenId, uint256 amount);
     event InterestAccrued(address indexed user, uint256 indexed tokenId, uint256 interestAmount);
     event InterestCollected(address indexed user, uint256 indexed tokenId, uint256  deductLAmountInWei, uint256 interestAmount); // modified by jintao
@@ -157,7 +157,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
             totalInterestAccrued += newAccruedInterest;
             totalLeverageAmount += lAmountInWei;
             
-            emit PositionIncreased(user, leverageTokenId, lAmountInWei, position.lAmountInWei);
+            emit PositionIncreased(user, leverageTokenId, lAmountInWei, position.lAmountInWei, position.accruedInterest); //modified by jintao
             emit InterestAccrued(user, leverageTokenId, newAccruedInterest);
         }
     }

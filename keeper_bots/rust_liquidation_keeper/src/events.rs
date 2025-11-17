@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
-use web3::types::{Address, BlockNumber, FilterBuilder, H256, U256, U64};
+use web3::types::{Address, BlockNumber, FilterBuilder, H256, U64};
 use futures_util::StreamExt;
 use crate::database::{Database, AuctionInfo, AuctionStatus, UserPosition};
 

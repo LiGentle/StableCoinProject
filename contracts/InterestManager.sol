@@ -55,8 +55,8 @@ contract InterestManager is Ownable, ReentrancyGuard {
     // ================= 事件定义 =================
     
     event ContractInitialized(address indexed leverageToken, address indexed custodian);
-    event PositionOpened(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 timestamp);
-    event PositionIncreased(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 totalAmount, uint256 totalInterest);
+    event PositionOpened(address indexed user, uint256 indexed tokenId,  uint256 amount, uint256 timestamp);
+    event PositionIncreased(address indexed user, uint256 indexed tokenId,  uint256 amount, uint256 totalAmount, uint256 totalInterest);
     event PositionClosed(address indexed user, uint256 indexed tokenId, uint256 amount);
     event InterestAccrued(address indexed user, uint256 indexed tokenId, uint256 interestAmount);
     event InterestCollected(address indexed user, uint256 indexed tokenId, uint256  deductLAmountInWei, uint256 interestAmount); // modified by jintao
@@ -125,7 +125,6 @@ contract InterestManager is Ownable, ReentrancyGuard {
     ) external onlyCustodian onlyInitialized validAddress(user) {
         
         require(lAmountInWei > 0, "Invalid amount");
-        
         UserPosition storage position = userPositions[user][leverageTokenId];
         
         if (position.lAmountInWei == 0) {
@@ -139,7 +138,7 @@ contract InterestManager is Ownable, ReentrancyGuard {
             totalActivePositions += 1;
             totalLeverageAmount += lAmountInWei;
             
-            emit PositionOpened(user, leverageTokenId, lAmountInWei, block.timestamp);
+            emit PositionOpened(user, leverageTokenId,  lAmountInWei, block.timestamp);
         } else {
             // 增加持仓 - 先计算之前的累计利息; 更新totalInterestAccrued, 但是利息不轉移到當前InterestManager合约!!!
             uint256 newAccruedInterest = _calculateAccruedInterest(

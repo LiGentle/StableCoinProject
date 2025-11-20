@@ -208,7 +208,7 @@ contract Liquidation is AccessControl, ReentrancyGuard {
     
     // ================= 新增事件 =================
     event RiskLevelUpdated(address indexed user, uint256 indexed tokenId, uint8 riskLevel);
-    event NetValueAdjusted(address indexed user, uint256 indexed fromTokenId, uint256 indexed toTokenId, uint256 adjustAmountInWei, uint256 underlyingAmountInWei);
+    event NetValueAdjusted(address indexed user, uint256 indexed fromTokenId,  uint256 indexed toTokenId, LeverageType leverage, uint256 newMintPrice, uint256 adjustAmountInWei, uint256 underlyingAmountInWei);
     event NoLeftAfterLiquidation(string message);
 
     event DEFICIT(uint256 value);
@@ -600,7 +600,7 @@ contract Liquidation is AccessControl, ReentrancyGuard {
         userLiquidationStatus[user][newTokenId].riskLevel = 0;
         userLiquidationStatus[user][newTokenId].balance = adjustedAmount;
         
-        emit NetValueAdjusted(user, fromTokenId, newTokenId, adjustedAmount, underlyingAmountInWei);
+        emit NetValueAdjusted(user, fromTokenId, newTokenId, leverage, newMintPrice, adjustedAmount, underlyingAmountInWei);
         
         return (newTokenId, adjustedAmount);
     }

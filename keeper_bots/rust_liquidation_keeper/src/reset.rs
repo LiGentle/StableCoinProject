@@ -16,7 +16,7 @@ use tokio::time::{Duration, Instant};
 use crate::database::Database;
 
 /// 拍卖重置任务
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct AuctionResetTask {
     auction_id: U256,
     reset_time: Instant,
@@ -58,18 +58,16 @@ impl AuctionResetMonitor {
     }
 
     /// 添加新拍卖的重置任务
+    /// 注意：此函数在AuctionStarted事件立即调用，此时拍卖记录必定存在，无需检查
     pub async fn schedule_auction_reset(
         &self,
         auction_id: U256,
         starting_price: U256,
-        price_drop_threshold: U256,
-        reset_time: U256,
     ) -> anyhow::Result<()> {
-        // 检查拍卖是否还在活跃状态
-        if !self.database.is_auction_active(auction_id)? {
-            tracing::debug!("拍卖 {} 已不活跃，跳过重置计划", auction_id);
-            return Ok(());
-        }
+        // 从数据库获取系统参数
+        let system_params = self.database.get_system_params()?;
+        let price_drop_threshold = system_params.price_drop_threshold;
+        let reset_time = system_params.reset_time;
 
         // 计算达到价格下界所需的时间
         let reset_duration_secs = calculate_reset_duration(
@@ -94,8 +92,14 @@ impl AuctionResetMonitor {
             auction_id, reset_duration_secs, starting_price, price_drop_threshold
         );
 
-        // 创建重置任务
+        // 创建重置任务并记录到pending_reset映射中
         let task = AuctionResetTask::new(auction_id, reset_instant);
+
+        // 添加到待处理任务映射，以便将来可以取消
+        if let Ok(mut pending_resets) = self.pending_resets.write() {
+            pending_resets.insert(auction_id, task.clone());
+            tracing::debug!("拍卖 {} 重置任务已添加到待处理映射", auction_id);
+        }
 
         // 启动异步任务执行重置
         self.start_reset_task(task);
@@ -117,8 +121,8 @@ impl AuctionResetMonitor {
                 tokio::time::sleep_until(reset_time).await;
             }
 
-            // 重置时刻已到，检查拍卖是否还存在
-            match database.is_auction_active(auction_id) {
+            // 重置时刻已到，检查拍卖记录是否还存在
+            match database.auction_exists(auction_id) {
                 Ok(true) => {
                     // 拍卖还存在，执行重置
                     tracing::info!("拍卖 {} 重置时刻已到，执行重置", auction_id);
@@ -207,53 +211,68 @@ impl AuctionResetMonitor {
 }
 
 /// 计算从起始价格降至价格下界所需的时间（秒）
-/// 基于Linear Decrease公式：price = startingPrice * ((resetTime - duration) / resetTime)
-/// 当 price/startingPrice <= price_drop_threshold 时需要重置
+/// 精确模拟Solidity LinearDecrease合约的price函数：
+/// price(current_time) = starting_price * (tau - elapsed) / tau
+/// 当price <= starting_price * price_drop_threshold时需要重置
 ///
-/// 返回0表示已经达到或超过下界，立即重置
+/// 参数：
+/// - starting_price: 拍卖起始价格 (WAD精度)
+/// - price_drop_threshold: 价格下界比例 (WAD精度, 如0.5 * 1e18表示50%)
+/// - reset_time(tau): 从开始到价格为0所需的总时间 (秒)
+///
+/// 返回：需要等待的时间（秒）, 0表示立即重置
 fn calculate_reset_duration(
     starting_price: U256,
     price_drop_threshold: U256,
-    max_reset_time: U256,
+    reset_time: U256,  // tau in solidity contract
 ) -> u64 {
     if starting_price == U256::zero() {
-        return 0; // 无效价格，立即重置
+        return 0; // 无效起始价格，立即重置
     }
 
-    // 计算目标价格下界：starting_price * price_drop_threshold
-    // price_drop_threshold通常是一个很小的分数，比如0.5表示50%
-    // 这里将其转换为整数计算：threshold = price_drop_threshold / 1e18（假设是18位精度）
-    let precision = U256::from(1_000_000_000_000_000_000_u64); // 1e18
-    let target_price = starting_price
-        .saturating_mul(price_drop_threshold)
-        .saturating_div(precision);
+    let reset_time_u64 = reset_time.as_u64();
+    if reset_time_u64 == 0 {
+        return 0; // 无效重置时间，立即重置
+    }
 
-    // 如果当前价格已经 <= 目标价格，返回0（立即重置）
-    if target_price >= starting_price {
+    // 价格下界 = 起始价格 * 阈值比例
+    // 由于都是WAD精度(1e18)，直接相乘
+    let precision = U256::from(1_000_000_000_000_000_000_u64); // WAD = 1e18
+    let threshold_price = starting_price
+        .saturating_mul(price_drop_threshold)
+        .checked_div(precision)
+        .unwrap_or(U256::zero());
+
+    // 如果阈值价格 >= 起始价格（异常情况），立即重置
+    if threshold_price >= starting_price {
         return 0;
     }
 
-    // 线性递减公式推导：
-    // price = startingPrice * ((max_reset_time - duration) / max_reset_time)
-    // target_price = startingPrice * ((max_reset_time - duration) / max_reset_time)
-    // target_price / startingPrice = (max_reset_time - duration) / max_reset_time
-    // max_reset_time - duration = (target_price * max_reset_time) / startingPrice
-    // duration = max_reset_time - (target_price * max_reset_time) / startingPrice
+    // 解Linear Decrease公式：
+    // threshold_price = starting_price * (reset_time - elapsed) / reset_time
+    // threshold_price / starting_price = (reset_time - elapsed) / reset_time
+    // threshold_price * reset_time / starting_price = reset_time - elapsed
+    // elapsed = reset_time - (threshold_price * reset_time / starting_price)
 
-    let max_reset_time_u64 = max_reset_time.as_u64();
-    let numerator = target_price.saturating_mul(max_reset_time);
+    let numerator = threshold_price.saturating_mul(reset_time);
     let denominator = starting_price;
 
     if denominator == U256::zero() {
-        return max_reset_time_u64; // 避免除零
+        return reset_time_u64;
     }
 
-    let remaining_time = numerator / denominator;
-    let duration = if remaining_time >= max_reset_time {
-        0 // 已经达到价格下界
+    let remaining_ratio = numerator.checked_div(denominator).unwrap_or(U256::zero());
+    let elapsed_time = if remaining_ratio >= reset_time {
+        // 价格下界 > 当前起始价格，不可能，立即重置
+        0u64
     } else {
-        max_reset_time_u64.saturating_sub(remaining_time.as_u64())
+        let elapsed_u256 = reset_time.saturating_sub(remaining_ratio);
+        if elapsed_u256 > U256::from(u64::MAX) {
+            reset_time_u64 // 溢出，设置为最大值
+        } else {
+            elapsed_u256.as_u64()
+        }
     };
 
-    duration
+    elapsed_time
 }

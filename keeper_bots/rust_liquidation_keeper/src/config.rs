@@ -3,7 +3,6 @@
 //! 负责加载和管理应用的配置。
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -13,10 +12,6 @@ pub struct AppConfig {
     pub ws_url: Option<String>,
     /// 私钥（用于签名交易）
     pub private_key: Option<String>,
-    /// 清算阈值 (基础点, 例如 8000 = 80%)
-    pub liquidation_threshold: u64,
-    /// 调整阈值 (基础点)
-    pub adjustment_threshold: u64,
     /// NAV重新计算间隔（秒）
     pub nav_recalc_interval: u64,
     /// 清算检查间隔（秒）
@@ -24,9 +19,6 @@ pub struct AppConfig {
 
     /// 合约地址们
     pub contracts: ContractAddresses,
-
-    /// 当前利率 (基础点)
-    pub current_interest_rate: u64,
 
     /// 事件监控配置
     pub event_monitoring: EventMonitoringConfig,
@@ -49,12 +41,9 @@ impl Default for AppConfig {
             rpc_url: "http://localhost:8545".to_string(),
             ws_url: Some("ws://localhost:8546".to_string()), // 默认WebSocket URL
             private_key: None,
-            liquidation_threshold: 8000, // 80%
-            adjustment_threshold: 8500,  // 85%
             nav_recalc_interval: 300,     // 5分钟
             liquidation_check_interval: 30, // 30秒
             contracts: ContractAddresses::default(),
-            current_interest_rate: 300, // 3%
             event_monitoring: EventMonitoringConfig::default(),
         }
     }
@@ -97,6 +86,8 @@ pub struct EventMonitoringConfig {
     pub max_logs_per_request: usize,
     /// 批处理大小
     pub batch_size: usize,
+    /// 冷启动时回溯的区块数量（0代表只从最新区块开始，不同步历史）
+    pub cold_start_backtrace_blocks: u64,
 }
 
 impl Default for EventMonitoringConfig {
@@ -105,6 +96,7 @@ impl Default for EventMonitoringConfig {
             polling_interval_secs: 10,     // 20秒轮询间隔（降低频率）
             max_logs_per_request: 1000,     // 每次最多获取1000条日志
             batch_size: 50,                 // 批处理大小
+            cold_start_backtrace_blocks: 100000,  // 冷启动时回溯最近10万个区块
         }
     }
 }

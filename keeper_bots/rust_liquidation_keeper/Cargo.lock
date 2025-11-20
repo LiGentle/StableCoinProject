@@ -1652,11 +1652,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "config",
+ "ethabi",
  "futures-util",
  "rocksdb",
  "serde",
  "serde_json",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
  "web3",

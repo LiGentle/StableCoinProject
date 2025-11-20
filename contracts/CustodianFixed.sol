@@ -63,7 +63,7 @@ contract CustodianFixed is Ownable, AccessControl, ReentrancyGuard {
     event StartTrading();
     event SystemInitialized(address indexed interestManager, address indexed priceFeed, address indexed feeCollector);
     event AcceptPrice(uint256 indexed priceInWei, uint256 indexed timeInSecond);
-    event Mint(address indexed user, uint256 underlyingAmountInWei, uint256 leverageLevel, uint256 mintPriceInWei, uint256 sAmountInWei, uint256 lAmountInWei);
+    event Mint(address indexed user, uint256 tokenId, uint256 underlyingAmountInWei, LeverageType leverageLevel, uint256 mintPriceInWei, uint256 sAmountInWei, uint256 lAmountInWei);
     event Burn(address indexed user, uint256 tokenId, uint256 sAmountInWei, uint256 lAmountInWei, uint256 underlyingAmountInWei);
     event InterestManagerUpdated(address indexed oldManager, address indexed newManager);
     event FeeCollectorUpdated(address indexed oldCollector, address indexed newCollector);
@@ -332,8 +332,9 @@ contract CustodianFixed is Ownable, AccessControl, ReentrancyGuard {
 
         emit Mint(
             msg.sender, 
+            leverageTokenId, 
             underlyingAmountInWei, 
-            uint256(leverageLevel), 
+            leverageLevel, 
             mintPriceInWei, 
             sAmountInWei, 
             lAmountInWei
@@ -1026,6 +1027,7 @@ function getSingleLeverageTokenNavV2(
     event InterestPaidInAdjustment(uint256 interest);
 
 
+
     // ================= Accounting =====================
     
     function getAccumulatedRewardInStable() external onlyRole(ADMIN_ROLE) view returns (uint256) {
@@ -1295,8 +1297,7 @@ function getSingleLeverageTokenNavV2(
         
         // 记录持仓信息, 用於計算利息
         interestManager.recordPosition(user, toTokenId, amountInWei);
-
-
+        
         // 记录用户新的tokenId
         if (!userHasToken[user][toTokenId]) {
             userTokenIds[user].push(toTokenId);

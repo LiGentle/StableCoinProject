@@ -7,9 +7,9 @@ mod database;
 mod events;
 mod liquidation;
 mod nav;
+mod reset;
 
 use std::sync::Arc;
-use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -37,17 +37,27 @@ async fn main() -> anyhow::Result<()> {
     );
     tracing::info!("Web3客户端初始化成功");
 
-    // 创建监控器
-    let mut liquidation_monitor = liquidation::LiquidationMonitor::new(
+    // 创建导航监控器对象供清算监控器使用
+    let nav_for_liquidation = nav::NavMonitor::new(
         web3.clone(),
         database.clone(),
-        config.clone(),
     )?;
 
+    // 创建清算监控器
+    let mut liquidation_monitor = liquidation::LiquidationMonitor::new(
+        web3.clone(),
+        nav_for_liquidation,
+        database.clone(),
+        config.clone(),
+        config.contracts.oracle.clone(),
+        config.contracts.liquidation_manager.clone(),
+        config.contracts.auction_manager.clone(),
+    )?;
+
+    // 创建独立的NAV监控器用于单独运行
     let mut nav_monitor = nav::NavMonitor::new(
         web3.clone(),
         database.clone(),
-        config.clone(),
     )?;
 
     let mut event_monitor = events::EventMonitor::new(

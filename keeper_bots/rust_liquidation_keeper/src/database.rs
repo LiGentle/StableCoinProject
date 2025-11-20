@@ -2,10 +2,29 @@
 //!
 //! 使用 RocksDB 存储系统参数、用户持仓、NAV数据和auction信息。
 
-use std::path::Path;
 use rocksdb::{DB, Options};
 use web3::types::{Address, U256};
 use serde::{Deserialize, Serialize};
+
+/// 杠杆类型枚举 - 对应 Solidity 的 LeverageType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LeverageType {
+    Conservative,  // 保守型 (1S8L)
+    Moderate,      // 温和型 (1S4L)
+    Aggressive,    // 激进型 (1S1L)
+}
+
+impl LeverageType {
+    /// 从uint8值转换为LeverageType枚举
+    pub fn from_u8(value: u8) -> anyhow::Result<Self> {
+        match value {
+            0 => Ok(LeverageType::Conservative),
+            1 => Ok(LeverageType::Moderate),
+            2 => Ok(LeverageType::Aggressive),
+            _ => Err(anyhow::anyhow!("Invalid leverage type value: {}", value)),
+        }
+    }
+}
 
 /// 拍卖信息结构体 - 存储在数据库中
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,7 +37,6 @@ pub struct AuctionInfo {
     pub triggerer: Address,
     pub reward_amount: U256,
     pub start_time: u64,      // 拍卖开始时间戳
-    pub status: AuctionStatus,// 拍卖状态
 }
 
 /// 用户持仓信息结构体
@@ -29,15 +47,11 @@ pub struct UserPosition {
     pub amount: U256,           // 总持仓数量
     pub timestamp: u64,         // 最后更新时间戳
     pub total_interest: U256,   // 累计利息
+    pub leverage: LeverageType, // 杠杆类型
+    pub mint_price: U256,       // 铸币价格
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AuctionStatus {
-    Active,
-    Reset,
-    Removed,
-    Cancelled,
-}
+
 
 /// 数据库连接
 pub struct Database {
@@ -198,6 +212,92 @@ impl Database {
         self.set_system_params(&params)
     }
 
+    /// 获取最后同步的区块号
+    pub fn get_last_synced_block(&self) -> anyhow::Result<Option<u64>> {
+        let key = b"last_synced_block";
+
+        match self.db.get(key)? {
+            Some(data) => {
+                let block_number: u64 = serde_json::from_slice(&data)?;
+                Ok(Some(block_number))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 设置最后同步的区块号
+    pub fn set_last_synced_block(&self, block_number: u64) -> anyhow::Result<()> {
+        let key = b"last_synced_block";
+        let data = serde_json::to_vec(&block_number)?;
+        self.db.put(key, data)?;
+        tracing::debug!("最后同步区块号已更新: {}", block_number);
+        Ok(())
+    }
+
+    /// 获取区块时间戳（从缓存中获取）
+    pub fn get_block_timestamp(&self, block_number: u64) -> anyhow::Result<Option<u64>> {
+        let key = format!("block_timestamp_{}", block_number);
+
+        match self.db.get(key.as_bytes())? {
+            Some(data) => {
+                let timestamp: u64 = serde_json::from_slice(&data)?;
+                Ok(Some(timestamp))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 缓存区块时间戳
+    pub fn cache_block_timestamp(&self, block_number: u64, timestamp: u64) -> anyhow::Result<()> {
+        let key = format!("block_timestamp_{}", block_number);
+        let data = serde_json::to_vec(&timestamp)?;
+        self.db.put(key.as_bytes(), data)?;
+        tracing::trace!("区块时间戳已缓存: 区块={}, 时间戳={}", block_number, timestamp);
+        Ok(())
+    }
+
+    /// 批量缓存区块时间戳
+    pub fn cache_block_timestamps(&self, timestamps: &[(u64, u64)]) -> anyhow::Result<()> {
+        for (block_number, timestamp) in timestamps {
+            self.cache_block_timestamp(*block_number, *timestamp)?;
+        }
+        tracing::debug!("批量缓存了 {} 个区块时间戳", timestamps.len());
+        Ok(())
+    }
+
+    /// 清理过期的区块时间戳缓存（保留最近的5,000个区块的缓存）
+    pub fn cleanup_old_block_timestamps(&self, current_block: u64) -> anyhow::Result<()> {
+        let mut to_delete = Vec::new();
+        let keep_threshold = current_block.saturating_sub(5000);
+
+        // 收集需要删除的键
+        let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, _) = item?;
+            let key_str = String::from_utf8(key.to_vec())?;
+
+            if key_str.starts_with("block_timestamp_") {
+                if let Some(block_str) = key_str.strip_prefix("block_timestamp_") {
+                    if let Ok(block_num) = block_str.parse::<u64>() {
+                        if block_num < keep_threshold {
+                            to_delete.push(key.to_vec());
+                        }
+                    }
+                }
+            }
+        }
+
+        // 批量删除
+        if !to_delete.is_empty() {
+            for key in &to_delete {
+                self.db.delete(key)?;
+            }
+            tracing::debug!("清理了 {} 个过期的区块时间戳缓存", to_delete.len());
+        }
+
+        Ok(())
+    }
+
     /// 拍卖相关数据库方法
 
     /// 存储拍卖信息
@@ -222,25 +322,7 @@ impl Database {
         }
     }
 
-    /// 更新拍卖状态
-    pub fn update_auction_status(&self, auction_id: U256, new_status: AuctionStatus) -> anyhow::Result<()> {
-        let key = format!("auction_{}", auction_id);
 
-        match self.db.get(key.as_bytes())? {
-            Some(data) => {
-                let mut auction: AuctionInfo = serde_json::from_slice(&data)?;
-                tracing::info!("拍卖 {} 状态更新为 {:?}", auction_id, new_status);
-                auction.status = new_status;
-                let updated_data = serde_json::to_vec(&auction)?;
-                self.db.put(key.as_bytes(), updated_data)?;
-                Ok(())
-            }
-            None => {
-                tracing::warn!("尝试更新不存在的拍卖: ID={}", auction_id);
-                Ok(())
-            }
-        }
-    }
 
     /// 删除拍卖信息
     pub fn delete_auction(&self, auction_id: U256) -> anyhow::Result<()> {
@@ -250,11 +332,11 @@ impl Database {
         Ok(())
     }
 
-    /// 获取所有活跃拍卖
-    pub fn get_active_auctions(&self) -> anyhow::Result<Vec<AuctionInfo>> {
-        let mut active_auctions = Vec::new();
+    /// 获取所有拍卖（通过存在性判断活跃状态）
+    pub fn get_all_auctions(&self) -> anyhow::Result<Vec<AuctionInfo>> {
+        let mut auctions = Vec::new();
 
-        // 遍历所有拍卖记录
+        // 遍历所有auction_开头的记录
         let iter = self.db.iterator(rocksdb::IteratorMode::Start);
         for item in iter {
             let (key, value) = item?;
@@ -262,13 +344,20 @@ impl Database {
 
             if key_str.starts_with("auction_") {
                 let auction: AuctionInfo = serde_json::from_slice(&value)?;
-                if let AuctionStatus::Active = auction.status {
-                    active_auctions.push(auction);
-                }
+                auctions.push(auction);
             }
         }
 
-        Ok(active_auctions)
+        Ok(auctions)
+    }
+
+    /// 检查拍卖记录是否存在（存在即为活跃）
+    pub fn auction_exists(&self, auction_id: U256) -> anyhow::Result<bool> {
+        let key = format!("auction_{}", auction_id);
+        match self.db.get(key.as_bytes())? {
+            Some(_) => Ok(true),
+            None => Ok(false),
+        }
     }
 
     /// 用户持仓相关数据库方法
@@ -320,5 +409,24 @@ impl Database {
         self.db.delete(key.as_bytes())?;
         tracing::info!("用户持仓已删除 - 用户: {:?}, TokenID: {}", user, token_id);
         Ok(())
+    }
+
+    /// 获取所有用户的持仓信息
+    pub fn get_all_user_positions(&self) -> anyhow::Result<Vec<UserPosition>> {
+        let mut positions = Vec::new();
+
+        // 遍历所有以"position_"开头的记录
+        let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, value) = item?;
+            let key_str = String::from_utf8(key.to_vec())?;
+
+            if key_str.starts_with("position_") {
+                let position: UserPosition = serde_json::from_slice(&value)?;
+                positions.push(position);
+            }
+        }
+
+        Ok(positions)
     }
 }
